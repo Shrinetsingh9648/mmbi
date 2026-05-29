@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.idea/
+*.iml
+.vscode/
+.env
+
+# Session data (generated at runtime)
+learning/data/sessions/*.npz
+learning/data/sessions/*.csv
+learning/data/sessions/*.json
+
+# Capture files
+capture/*.jpg
+capture/*.png
+
+# OS files
+Thumbs.db
+.DS_Store
