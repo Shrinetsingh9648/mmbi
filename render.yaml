@@ -3,7 +3,7 @@ services:
     name: mmbi-cognitive-engine
     runtime: docker
     region: oregon
-    plan: starter
+    plan: free
     envVars:
       - key: PORT
         value: "8000"
