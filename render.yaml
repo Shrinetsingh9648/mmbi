@@ -1,13 +1,9 @@
 services:
   - type: web
     name: mmbi-cognitive-engine
-    runtime: python
+    runtime: docker
     region: oregon
     plan: starter
-    buildCommand: pip install -r requirements.txt && ln -s /opt/render/project/src /opt/render/project/mmbi
-    startCommand: python -m mmbi.server
     envVars:
-      - key: PYTHONPATH
-        value: /opt/render/project
-      - key: PYTHON_VERSION
-        value: "3.11.9"
+      - key: PORT
+        value: "8000"
