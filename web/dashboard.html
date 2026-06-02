@@ -231,7 +231,8 @@
         const constraints = {
             video: {
                 width: { ideal: 640 },
-                height: { ideal: 480 }
+                height: { ideal: 480 },
+                frameRate: { ideal: 120, max: 120 }
             }
         };
 
@@ -442,9 +443,8 @@
             }
             isLiveRendering = true;
             
-            // Draw smooth 60FPS video frame locally
+            // Clear canvas to keep it transparent so native video underneath is visible
             ctx.clearRect(0,0, canvas.width, canvas.height);
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             const noFaceAlert = document.getElementById("no-face-alert");
             if (latestTelemetry) {
