@@ -19,8 +19,8 @@ COPY . /app/mmbi
 
 # Set environment variables
 ENV PYTHONPATH=/app
-ENV PORT=8000
-EXPOSE 8000
+ENV PORT=7860
+EXPOSE 7860
 
 # Start the server
 CMD ["python", "-m", "mmbi.server"]
