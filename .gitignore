@@ -1,0 +1,23 @@
+# IDE
+.idea/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# Model files
+*.pt
+*.pth
+*.h5
+
+# Dataset / archives
+dataset/
+datasets/
+*.zip
