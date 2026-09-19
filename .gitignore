@@ -21,3 +21,4 @@ venv/
 dataset/
 datasets/
 *.zip
+learning/data/
