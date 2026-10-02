@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MMBI Enterprise Cognitive Analyst Dashboard</title>
+    <title>MMBI Enterprise - Behaviour & Interest Analysis Platform</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <!-- Modern Typography & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,13 +16,23 @@
     <header class="main-header">
         <div class="header-logo">
             <span class="pulse-dot" id="connection-dot"></span>
-            <h1>MMBI COGNITIVE ENGINE <span class="badge">Enterprise SaaS</span></h1>
+            <h1>MMBI <span class="badge">AI BEHAVIOUR & INTEREST ANALYSIS</span></h1>
         </div>
-        <div class="header-controls">
+
+        <!-- Mode Switcher Tabs -->
+        <div class="mode-switcher">
+            <button class="mode-tab active" id="tab-live"><i class="fa-solid fa-satellite-dish"></i> Live Analysis</button>
+            <button class="mode-tab" id="tab-recorded"><i class="fa-solid fa-file-video"></i> Recorded Video</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div id="session-timer-badge" class="badge" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 0.8rem; padding: 5px 12px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-stopwatch"></i> <span id="session-duration">00:00</span>
+            </div>
             <select id="camera-select" class="camera-dropdown" style="display: none;"></select>
-        </div>
-        <div class="header-status" id="system-status">
-            ● SYSTEM INITIALISING...
+            <div class="header-status" id="system-status">
+                ● SYSTEM INITIALISING...
+            </div>
         </div>
     </header>
 
@@ -41,14 +51,27 @@
 
         <!-- 2. CENTER PANEL: Video Stream & Overlay Canvas -->
         <section class="panel panel-center">
-            <div class="panel-header text-center">
-                <h2><i class="fa-solid fa-camera"></i> COGNITIVE ANALYST FEED</h2>
+            <div class="panel-header text-center" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2><i class="fa-solid fa-camera"></i> <span id="center-panel-title">LIVE COGNITIVE FEED</span></h2>
+                <span id="session-id-display" class="badge" style="background: rgba(255, 140, 0, 0.15); border: 1px solid #ff8c00; color: #ff8c00; font-size: 0.68rem;">SESSION: CONNECTING...</span>
             </div>
             
-            <div class="media-container">
+            <!-- Live Media Container -->
+            <div class="media-container" id="live-media-container">
                 <video id="webcam" autoplay playsinline muted></video>
                 <canvas id="overlay-canvas"></canvas>
                 
+                <!-- Prominent Current Interest State Display -->
+                <div class="interest-state-overlay" id="interest-overlay">
+                    <div class="interest-badge neutral" id="interest-badge">
+                        <i class="fa-solid fa-compass" id="interest-icon"></i>
+                        <span id="interest-badge-text">NEUTRAL</span>
+                    </div>
+                    <div class="signals-pill-container" id="signals-pill-container">
+                        <span class="signal-pill">Monitoring multimodal signals</span>
+                    </div>
+                </div>
+
                 <!-- Dynamic Pulsing Status Overlays -->
                 <div class="no-face-overlay" id="no-face-alert">
                     <div class="alert-content">
@@ -62,9 +85,76 @@
                     <span id="repressed-message">⚠ MICRO SPIKE DETECTED</span>
                 </div>
             </div>
+
+            <!-- Recorded Video Analysis Container (Active in Recorded Mode) -->
+            <div class="recorded-workspace" id="recorded-workspace" style="display: none; padding: 15px; background: rgba(15, 17, 26, 0.45); border-radius: 14px; height: 100%; overflow-y: auto;">
+                <div class="video-upload-dropzone" id="video-dropzone">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <h3 style="font-size: 1.15rem; color: #ffffff;">Upload Recorded Video for Session Analysis</h3>
+                    <p style="font-size: 0.8rem; color: #94a3b8; max-width: 440px;">
+                        Drag and drop your recorded session file here, or click to browse.<br/>
+                        Supported formats: <strong>MP4, AVI, MOV, MKV</strong>
+                    </p>
+                    <span class="badge" style="background: rgba(255,140,0,0.18); color:#ff8c00; border:1px solid #ff8c00; font-size: 0.68rem;">
+                        Preserves Original Video Timestamps & FPS
+                    </span>
+                    <input type="file" id="recorded-file-input" accept="video/mp4,video/avi,video/quicktime,video/x-matroska,.mp4,.avi,.mov,.mkv" style="display: none;">
+                </div>
+
+                <div id="recorded-preview-section" style="display: none; flex-direction: column; gap: 12px; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.8rem; color: #cbd5e1; font-weight: 600;"><i class="fa-solid fa-film"></i> Selected Video: <strong id="selected-video-name" style="color: #ff8c00;">video.mp4</strong></span>
+                        <span id="video-filesize" class="badge" style="background: rgba(255,255,255,0.06); color: #94a3b8;">-</span>
+                    </div>
+
+                    <video id="recorded-preview-player" controls style="width: 100%; max-height: 260px; border-radius: 10px; background: #000; border: 1px solid rgba(255,255,255,0.1);"></video>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-save" id="btn-start-video-analysis" style="flex: 2; padding: 12px; font-size: 0.95rem;">
+                            <i class="fa-solid fa-play"></i> START COMPREHENSIVE ANALYSIS
+                        </button>
+                        <button class="btn btn-calibrate" id="btn-reupload-video" style="flex: 1;">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> CHANGE FILE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Video Processing Progress Card -->
+                <div class="progress-container" id="video-progress-card" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: #ff8c00; font-size: 0.85rem;"><i class="fa-solid fa-gear fa-spin"></i> FRAME-BY-FRAME MMBI ANALYSIS IN PROGRESS</strong>
+                        <span id="video-progress-pct" style="font-weight: 800; color: #00d2ff;">0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="video-progress-bar"></div>
+                    </div>
+                    <div class="stats-grid-4">
+                        <div class="stat-box">
+                            <div class="stat-label">Processed Frames</div>
+                            <div class="stat-val" id="stat-frames">0 / 0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Video Timestamp</div>
+                            <div class="stat-val" id="stat-timestamp">00:00</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Processing Rate</div>
+                            <div class="stat-val" id="stat-fps">0.0 FPS</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Micro Twitches</div>
+                            <div class="stat-val" id="stat-mes" style="color: #ff3030;">0</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px;">
+                        <span style="font-size: 0.75rem; color: #94a3b8;">Current Interest State:</span>
+                        <span id="live-video-interest-pill" class="badge" style="background: #d97706; color: #fff;">ANALYZING...</span>
+                    </div>
+                </div>
+            </div>
         </section>
 
-        <!-- 3. RIGHT PANEL: Gauges & Oscilloscope -->
+        <!-- 3. RIGHT PANEL: Gauges & Telemetry -->
         <section class="panel panel-right">
             <div class="panel-header">
                 <h2><i class="fa-solid fa-chart-line"></i> COGNITIVE TELEMETRY</h2>
@@ -100,23 +190,28 @@
             <!-- Real-Time Emotion Profiler Cards -->
             <div class="metric-row" style="flex-direction: column; align-items: flex-start; gap: 4px; background: rgba(255, 140, 0, 0.03); border-color: rgba(255, 140, 0, 0.15); padding: 10px 12px;">
                 <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.70rem; color: #ff8c00; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.3;">
-                    <span><i class="fa-solid fa-face-smile"></i> CURRENT EXPRESSION PERSON IS SHOWING<br><small style="color: #cbd5e0; font-size: 0.60rem;">Reflecting Macro Expression Emotion</small></span>
+                    <span><i class="fa-solid fa-face-smile"></i> SHOWING EXPRESSION<br><small style="color: #cbd5e0; font-size: 0.60rem;">Reflecting Macro Baseline</small></span>
                     <span id="macro-conf" class="badge badge-green" style="align-self: flex-start;">100%</span>
                 </div>
-                <div id="macro-val" style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 900; color: #ffffff; text-transform: uppercase; margin-top: 2px;">NEUTRAL</div>
+                <div id="macro-val" style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 900; color: #ffffff; text-transform: uppercase; margin-top: 2px;">NEUTRAL</div>
             </div>
 
             <div class="metric-row" style="flex-direction: column; align-items: flex-start; gap: 4px; background: rgba(0, 210, 255, 0.03); border-color: rgba(0, 210, 255, 0.15); padding: 10px 12px;">
                 <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.70rem; color: #00d2ff; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.3;">
-                    <span><i class="fa-solid fa-eye-slash"></i> MICRO EXPRESSION PERSON IS HIDING<br><small style="color: #cbd5e0; font-size: 0.60rem;">Reflecting Micro Expression Hidden Emotion</small></span>
+                    <span><i class="fa-solid fa-eye-slash"></i> MICRO-EXPRESSION STATUS<br><small style="color: #cbd5e0; font-size: 0.60rem;">Involuntary Transient Twitches</small></span>
                     <span id="micro-region-badge" class="badge badge-orange" style="display: none; padding: 2px 6px; font-size: 0.6rem; align-self: flex-start;">EYES</span>
                 </div>
-                <div id="micro-val" style="font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 800; color: #a0aec0; text-transform: uppercase; margin-top: 2px;">MONITORING SENSORS...</div>
+                <div id="micro-val" style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; color: #a0aec0; text-transform: uppercase; margin-top: 2px;">MONITORING SENSORS...</div>
+                
+                <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.70rem; color: #94a3b8; margin-top: 4px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 4px;">
+                    <span>Count: <strong id="me-count-live" style="color: #ff8c00;">0</strong></span>
+                    <span>Last: <strong id="me-last-live" style="color: #cbd5e1;">None</strong></span>
+                </div>
             </div>
 
-            <!-- Gaze target tracker -->
+            <!-- Gaze & Attention Tracker -->
             <div class="metric-row">
-                <span class="metric-label">Gaze Focus:</span>
+                <span class="metric-label">Gaze Focus Zone:</span>
                 <span class="metric-value badge" id="gaze-zone">CENTER</span>
             </div>
             <div class="metric-row">
@@ -125,7 +220,7 @@
             </div>
             <div class="metric-row">
                 <span class="metric-label">Blink Rate:</span>
-                <span class="metric-value" id="blink-rate">12 / min</span>
+                <span class="metric-value" id="blink-rate">14 / min</span>
             </div>
 
             <!-- Micro Oscilloscope Pulse Wave -->
@@ -175,12 +270,202 @@
         </div>
         <div class="dock-content glass-dock">
             <div class="dock-buttons">
+                <button class="btn btn-save" id="btn-toggle-session"><i class="fa-solid fa-flag-checkered"></i> END SESSION & REPORT</button>
                 <button class="btn btn-calibrate" id="btn-calibrate"><i class="fa-solid fa-crosshairs"></i> CALIBRATE</button>
-                <button class="btn btn-load" id="btn-toggle-camera"><i class="fa-solid fa-video-slash"></i> STOP CAMERA</button>
+                <button class="btn btn-load" id="btn-toggle-camera"><i class="fa-solid fa-video-slash"></i> PAUSE CAMERA</button>
                 <button class="btn btn-capture" id="btn-capture-snapshot"><i class="fa-solid fa-camera"></i> CAPTURE</button>
-                <button class="btn btn-load" id="btn-load-video"><i class="fa-solid fa-file-video"></i> LOAD VIDEO</button>
-                <button class="btn btn-save" id="btn-save"><i class="fa-solid fa-file-export"></i> SAVE SESSION</button>
-                <input type="file" id="video-uploader" accept="video/*" style="display: none;">
+                <button class="btn btn-load" id="btn-view-report"><i class="fa-solid fa-file-invoice"></i> VIEW REPORT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Comprehensive Post-Session Report Modal ──────────────────────────── -->
+    <div id="report-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <div>
+                    <h2><i class="fa-solid fa-brain"></i> MMBI COMPLETE SESSION REPORT & AUDIT</h2>
+                    <span id="rep-modal-subtitle" style="font-size: 0.75rem; color: #94a3b8;">Session Analysis Record</span>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <a id="rep-btn-download-pdf-top" href="#" target="_blank" class="btn-download-pdf" style="font-size: 0.8rem; padding: 6px 14px;">
+                        <i class="fa-solid fa-file-pdf"></i> Download PDF
+                    </a>
+                    <button class="close-modal-btn" id="btn-close-modal">&times;</button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <!-- Section A: Overview Cards -->
+                <div class="modal-columns" style="margin-bottom: 15px;">
+                    <div class="modal-col">
+                        <h3><i class="fa-solid fa-circle-info"></i> A. Session Overview</h3>
+                        <div class="report-stat-row"><span>Session ID:</span><strong id="rep-id">-</strong></div>
+                        <div class="report-stat-row"><span>Analysis Type:</span><strong id="rep-type">-</strong></div>
+                        <div class="report-stat-row"><span>Duration:</span><strong id="rep-dur">-</strong></div>
+                        <div class="report-stat-row"><span>Total Frames:</span><strong id="rep-frames">-</strong></div>
+                        <div class="report-stat-row"><span>Processing Rate:</span><strong id="rep-fps">-</strong></div>
+                    </div>
+                    
+                    <!-- Section B: Interest Analysis -->
+                    <div class="modal-col" style="background: rgba(255, 140, 0, 0.03); border: 1px solid rgba(255, 140, 0, 0.15); border-radius: 10px; padding: 12px;">
+                        <h3><i class="fa-solid fa-compass"></i> B. Final Interest Analysis</h3>
+                        <div style="text-align: center; margin: 8px 0;">
+                            <span id="rep-interest-badge" class="badge" style="font-size: 1.1rem; padding: 6px 20px; font-weight: 900; background: #16a34a; color: #fff;">INTERESTED</span>
+                        </div>
+                        <div class="report-stat-row"><span>Interested Ratio:</span><strong id="rep-pct-interested" style="color: #4ade80;">-</strong></div>
+                        <div class="report-stat-row"><span>Neutral Ratio:</span><strong id="rep-pct-neutral" style="color: #fbbf24;">-</strong></div>
+                        <div class="report-stat-row"><span>Not Interested Ratio:</span><strong id="rep-pct-not-interested" style="color: #f87171;">-</strong></div>
+                        <div class="report-stat-row"><span>State Transitions:</span><strong id="rep-transitions">-</strong></div>
+                    </div>
+                </div>
+
+                <!-- Supporting Signals Box -->
+                <div class="report-diagnosis-card" style="margin-top: 0; margin-bottom: 18px;">
+                    <h3><i class="fa-solid fa-list-check"></i> Primary Contributing Behavioral Signals</h3>
+                    <ul id="rep-supporting-signals-list" style="padding-left: 20px; font-size: 0.8rem; color: #cbd5e1; line-height: 1.6;">
+                        <li>Cognitive engagement signals active</li>
+                    </ul>
+                </div>
+
+                <!-- Section C & D: Cognitive & Attention Stats -->
+                <div class="modal-columns" style="margin-bottom: 15px;">
+                    <div class="modal-col">
+                        <h3><i class="fa-solid fa-chart-line"></i> C. Cognitive Telemetry</h3>
+                        <div class="report-stat-row"><span>Average Engagement:</span><strong id="rep-eng-avg">-</strong></div>
+                        <div class="report-stat-row"><span>Engagement Range:</span><strong id="rep-eng-range">-</strong></div>
+                        <div class="report-stat-row"><span>Average Stress Index:</span><strong id="rep-str-avg">-</strong></div>
+                        <div class="report-stat-row"><span>Sustained Stress Load:</span><strong id="rep-stress-load">-</strong></div>
+                    </div>
+                    <div class="modal-col">
+                        <h3><i class="fa-solid fa-eye"></i> D. Attention Telemetry</h3>
+                        <div class="report-stat-row"><span>Eye Contact Percentage:</span><strong id="rep-eye-contact">-</strong></div>
+                        <div class="report-stat-row"><span>Gaze Distribution:</span><strong id="rep-gaze-dist">-</strong></div>
+                        <div class="report-stat-row"><span>Average Blink Rate:</span><strong id="rep-blink-rate">-</strong></div>
+                        <div class="report-stat-row"><span>Blink Stress Level:</span><strong id="rep-blink-stress">-</strong></div>
+                    </div>
+                </div>
+
+                <!-- Section E: Micro-Expression Detection -->
+                <div class="report-snapshots-card" style="margin-top: 0; margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h3><i class="fa-solid fa-bolt"></i> E. Micro-Expression Involuntary Twitches</h3>
+                        <span id="rep-me-stats-pill" class="badge" style="background: rgba(255, 48, 48, 0.2); border: 1px solid #ff3030; color: #ff3030;">0 DETECTED</span>
+                    </div>
+                    <div class="report-table-wrapper" style="max-height: 180px;">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Time</th>
+                                    <th>Duration</th>
+                                    <th>Region</th>
+                                    <th>Classification</th>
+                                    <th>Intensity</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rep-me-tbody">
+                                <tr><td colspan="7" style="text-align: center; color: #718096; padding: 12px 0;">No micro-expressions registered.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section F: Interest & Event Timeline -->
+                <div class="report-diagnosis-card" style="margin-bottom: 18px;">
+                    <h3><i class="fa-solid fa-timeline"></i> F. Chronological Interest State Intervals</h3>
+                    <div class="report-table-wrapper" style="max-height: 150px;">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Time Interval</th>
+                                    <th>Classified State</th>
+                                    <th>Duration</th>
+                                    <th>Avg Engagement</th>
+                                    <th>Micro Spikes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rep-timeline-tbody">
+                                <tr><td colspan="5" style="text-align: center; color: #718096;">Interval timeline initialising...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section G: Scientific Disclaimer -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; font-size: 0.75rem; color: #94a3b8; font-style: italic; line-height: 1.5; margin-bottom: 18px;">
+                    <i class="fa-solid fa-shield-halved" style="color: #ff8c00;"></i>
+                    <strong>Scientific Disclaimer:</strong> Micro-expression events are detected using the currently configured MMBI micro-expression pipeline. All conclusions represent model-estimated interest states based on observed behavioral signals and are not clinically validated diagnostic conclusions.
+                </div>
+
+                <!-- Section H: User Feedback Form -->
+                <div class="feedback-card" id="user-feedback-section">
+                    <h3 style="font-size: 0.95rem; color: #00d2ff; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-comment-dots"></i> Auditor & User Feedback
+                    </h3>
+                    <p style="font-size: 0.78rem; color: #94a3b8;">Provide your verification rating to be archived alongside this session report.</p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 12px;">
+                        <div>
+                            <label style="font-size: 0.72rem; color: #cbd5e1; font-weight: 600;">Overall Session Accuracy</label>
+                            <div class="rating-stars" id="star-rating-overall">
+                                <button class="star-btn active" data-val="1">★</button>
+                                <button class="star-btn active" data-val="2">★</button>
+                                <button class="star-btn active" data-val="3">★</button>
+                                <button class="star-btn active" data-val="4">★</button>
+                                <button class="star-btn active" data-val="5">★</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.72rem; color: #cbd5e1; font-weight: 600;">Interest Prediction Accuracy (1-5)</label>
+                            <select id="fb-interest-acc" style="width: 100%; background: #0f172a; color: #fff; border: 1px solid #334155; padding: 6px; border-radius: 6px; margin-top: 6px; font-size: 0.8rem;">
+                                <option value="5">5 - Highly Accurate</option>
+                                <option value="4" selected>4 - Mostly Accurate</option>
+                                <option value="3">3 - Moderately Accurate</option>
+                                <option value="2">2 - Partially Disagreed</option>
+                                <option value="1">1 - Inaccurate</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 0.72rem; color: #cbd5e1; font-weight: 600;">Micro-Expression Accuracy (1-5)</label>
+                            <select id="fb-micro-acc" style="width: 100%; background: #0f172a; color: #fff; border: 1px solid #334155; padding: 6px; border-radius: 6px; margin-top: 6px; font-size: 0.8rem;">
+                                <option value="5">5 - Highly Sensitive & Accurate</option>
+                                <option value="4" selected>4 - Good Detection</option>
+                                <option value="3">3 - Acceptable</option>
+                                <option value="2">2 - False Positives Noticed</option>
+                                <option value="1">1 - Missed Twitches</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <textarea id="fb-comment" class="feedback-textarea" placeholder="Additional observations or notes (e.g., 'The system correctly detected the moments where I lost attention.')..."></textarea>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <button class="btn-submit-feedback" id="btn-submit-feedback">
+                            <i class="fa-solid fa-paper-plane"></i> Submit Feedback
+                        </button>
+                        <span id="fb-status-msg" style="font-size: 0.78rem; color: #00e650; display: none;">✓ Feedback saved and embedded in report!</span>
+                    </div>
+                </div>
+
+                <!-- Snapshot Frame Grid Audit -->
+                <div class="report-snapshots-card" style="margin-top: 15px;">
+                    <h3><i class="fa-solid fa-camera-retro"></i> Chronological Captured Facial Signatures</h3>
+                    <div class="snapshots-grid" id="rep-snapshots-grid"></div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer" style="margin-top: 20px; display: flex; gap: 15px;">
+                <a id="rep-btn-download-pdf-bottom" href="#" target="_blank" class="btn-download-pdf" style="flex: 2;">
+                    <i class="fa-solid fa-file-pdf"></i> DOWNLOAD COMPLETE PDF REPORT
+                </a>
+                <button class="btn btn-calibrate" id="btn-modal-close" style="flex: 1;">
+                    <i class="fa-solid fa-xmark"></i> Close Audit
+                </button>
             </div>
         </div>
     </div>
@@ -195,7 +480,21 @@
         let ctx = canvas.getContext("2d");
         let hiddenCanvas = document.createElement("canvas");
         let hiddenCtx = hiddenCanvas.getContext("2d");
+
+        let activeStream = null;
+        let isWaitingForServer = false;
+        let cameraActive = true;
+        let activeAnalysisMode = "live"; // "live" | "recorded"
         
+        let currentSessionId = "MMBI-LIVE";
+        let sessionSnapshots = [];
+        let firstTableEntry = true;
+        let lastMicroTimestamp = 0;
+        let lastCapturedFrameTime = 0;
+        let lastMacroEmotion = "neutral";
+        let userOverallRating = 5;
+
+        // AU friendly labels
         const AU_FRIENDLY = {
             'AU1':  'Concern / Inner Brow',
             'AU2':  'Surprise / Outer Brow',
@@ -227,7 +526,7 @@
             auContainer.appendChild(row);
         });
 
-        // Initialize webcam with robust constraints and fallbacks
+        // ── Webcam & Streaming ────────────────────────────────────────────────
         const constraints = {
             video: {
                 width: { ideal: 640 },
@@ -235,10 +534,7 @@
             }
         };
 
-        let activeStream = null;
-
         function startWebcam(mediaConstraints) {
-            // Stop any active tracks to release camera locks
             if (activeStream) {
                 activeStream.getTracks().forEach(track => track.stop());
             }
@@ -248,11 +544,8 @@
                     activeStream = stream;
                     video.srcObject = stream;
                     
-                    // Explicitly invoke play() to satisfy strict browser autoplay restrictions
-                    video.play().then(() => {
-                        console.log("Webcam video stream started playing successfully.");
-                    }).catch(err => {
-                        console.warn("Failed to autoplay webcam stream. User interaction might be required.", err);
+                    video.play().catch(err => {
+                        console.warn("Autoplay notice:", err);
                     });
 
                     video.onloadedmetadata = () => {
@@ -269,12 +562,8 @@
                     };
                 })
                 .catch(err => {
-                    console.error("Camera access error with primary constraints:", err);
-                    if (mediaConstraints.video.deviceId) {
-                        // If device specific failed, try simple constraints fallback
-                        startWebcam({ video: true });
-                    } else if (mediaConstraints.video.width) {
-                        console.log("Retrying with simple constraints fallback...");
+                    console.error("Camera access error:", err);
+                    if (mediaConstraints.video && mediaConstraints.video.deviceId) {
                         startWebcam({ video: true });
                     } else {
                         handleCameraError(err);
@@ -284,95 +573,28 @@
 
         function populateCameraSelector() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-            
             navigator.mediaDevices.enumerateDevices()
                 .then(devices => {
-                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    const videoDevices = devices.filter(d => d.kind === 'videoinput');
                     const cameraSelect = document.getElementById("camera-select");
-                    
                     cameraSelect.innerHTML = "";
                     if (videoDevices.length > 0) {
                         cameraSelect.style.display = "inline-block";
-                        
                         videoDevices.forEach(device => {
                             const option = document.createElement("option");
                             option.value = device.deviceId;
                             option.text = device.label || `Camera ${cameraSelect.length + 1}`;
-                            
-                            // Highlight the active track
-                            const activeTrack = activeStream ? activeStream.getVideoTracks()[0] : null;
-                            if (activeTrack && device.label && activeTrack.label === device.label) {
-                                option.selected = true;
-                            }
-                            
                             cameraSelect.appendChild(option);
                         });
-                    } else {
-                        cameraSelect.style.display = "none";
                     }
-                })
-                .catch(err => console.error("Error enumerating devices:", err));
+                }).catch(e => console.warn(e));
         }
-
-        // Camera switch trigger
-        document.getElementById("camera-select").onchange = (e) => {
-            const deviceId = e.target.value;
-            if (deviceId) {
-                startWebcam({
-                    video: {
-                        deviceId: { exact: deviceId },
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    }
-                });
-            }
-        };
 
         function handleCameraError(err) {
             const statusEl = document.getElementById("system-status");
-            
-            let errMsg = "● CAMERA ERROR: UNKNOWN";
-            if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-                errMsg = "● CAMERA ERROR: PERMISSION DENIED (Enable webcam access in browser)";
-            } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-                errMsg = "● CAMERA ERROR: DEVICE IN USE (Close Zoom/Teams/Discord/OBS)";
-            } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-                errMsg = "● CAMERA ERROR: NO WEBCAM DETECTED (Connect a camera device)";
-            } else if (!window.isSecureContext) {
-                errMsg = "● CAMERA ERROR: SECURE CONTEXT REQUIRED (Use http://localhost:8000 or HTTPS)";
-            } else {
-                errMsg = `● CAMERA ERROR: ${err.message || err.name}`;
-            }
-
-            statusEl.innerHTML = errMsg;
-            statusEl.style.color = "#ff3030";
-            document.getElementById("connection-dot").style.background = "#ff3030";
-            
-            // Show nice floating alert box on top of feed
-            const noFaceOverlay = document.getElementById("no-face-alert");
-            noFaceOverlay.style.display = "flex";
-            noFaceOverlay.innerHTML = `
-                <div class="alert-content" style="color: #ff3030; text-align: center; padding: 20px;">
-                    <i class="fa-solid fa-camera-slash" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                    <span style="font-size: 1.2rem; font-weight: 800;">${errMsg.replace('● ', '')}</span>
-                    <p style="font-size: 0.85rem; color: #a0aec0; margin-top: 10px; max-width: 400px;">
-                        Make sure your webcam is plugged in, not currently being used by another application (like Zoom or another browser tab), and that you have granted this site camera permissions.
-                    </p>
-                </div>
-            `;
-            
-            // Proactively try to list cameras anyway so the user can switch away from a locked camera!
-            populateCameraSelector();
+            statusEl.innerHTML = "● CAMERA NOTICE: USING UPLOAD/VIDEO MODE OR GRANTED CAM";
+            statusEl.style.color = "#ff8c00";
         }
-
-        // Start webcam stream negotiation
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            startWebcam(constraints);
-        } else {
-            handleCameraError({ name: "NotSupportedError", message: "WebRTC getUserMedia not supported in this browser." });
-        }
-
-        let isWaitingForServer = false;
 
         function connectWebSocket() {
             socket = new WebSocket(wsUri);
@@ -389,8 +611,7 @@
                 document.getElementById("connection-dot").style.background = "#ff3030";
                 document.getElementById("system-status").innerHTML = "● SERVER DISCONNECTED";
                 document.getElementById("system-status").style.color = "#ff3030";
-                // Only auto-reconnect if the camera is still active (not intentionally stopped)
-                if (cameraActive) {
+                if (cameraActive && activeAnalysisMode === "live") {
                     setTimeout(connectWebSocket, 3000);
                 }
             };
@@ -398,42 +619,51 @@
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 handleTelemetry(data);
-                
-                // Server processed frame. Unlock and trigger next frame capture.
                 isWaitingForServer = false;
-                requestAnimationFrame(sendNextFrame);
+                if (activeAnalysisMode === "live" && cameraActive) {
+                    requestAnimationFrame(sendNextFrame);
+                }
             };
         }
 
         function sendNextFrame() {
-            if (socket.readyState !== WebSocket.OPEN || isWaitingForServer) return;
+            if (!socket || socket.readyState !== WebSocket.OPEN || isWaitingForServer || activeAnalysisMode !== "live") return;
+            if (!video.videoWidth || !video.videoHeight) {
+                requestAnimationFrame(sendNextFrame);
+                return;
+            }
             
             isWaitingForServer = true;
-            
-            // Draw camera frame into offscreen canvas
             hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-            
-            // Capture JPEG Blob and stream over socket
             hiddenCanvas.toBlob(blob => {
-                if (blob) {
+                if (blob && socket.readyState === WebSocket.OPEN) {
                     socket.send(blob);
                 } else {
-                    isWaitingForServer = false; // Reset if blob generation failed
+                    isWaitingForServer = false;
                 }
             }, 'image/jpeg', 0.65);
         }
 
-        let firstTableEntry = true;
-        let lastMicroTimestamp = 0;
-        let sessionSnapshots = [];
-        let lastMacroEmotion = "neutral";
-        let lastCapturedFrameTime = 0;
-
+        // ── Real-Time Telemetry Handling ─────────────────────────────────────
         function handleTelemetry(data) {
             const noFaceAlert = document.getElementById("no-face-alert");
-            
-            // Draw camera frame always so the user has immediate live preview
-            ctx.clearRect(0,0, canvas.width, canvas.height);
+
+            // Update session ID if available
+            if (data.session_id) {
+                currentSessionId = data.session_id;
+                document.getElementById("session-id-display").innerText = `SESSION: ${data.session_id}`;
+            }
+
+            // Update session timer
+            if (data.session_duration !== undefined) {
+                const secs = Math.floor(data.session_duration);
+                const m = Math.floor(secs / 60).toString().padStart(2, '0');
+                const s = (secs % 60).toString().padStart(2, '0');
+                document.getElementById("session-duration").innerText = `${m}:${s}`;
+            }
+
+            // Draw webcam frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             if (!data.face_detected) {
@@ -441,13 +671,10 @@
                 return;
             }
             noFaceAlert.style.display = "none";
-            
+
+            // Draw facial landmarks
             if (data.landmarks_2d) {
                 ctx.fillStyle = "rgba(0, 220, 255, 0.45)";
-                ctx.strokeStyle = "rgba(0, 220, 255, 0.28)";
-                ctx.lineWidth = 1;
-                
-                // Draw mesh landmarks dot-by-dot
                 data.landmarks_2d.forEach(pt => {
                     ctx.beginPath();
                     ctx.arc(pt[0], pt[1], 1.2, 0, 2 * Math.PI);
@@ -455,73 +682,102 @@
                 });
             }
 
-            // 2. Engagement & Stress SVG Gauges
+            // 1. Current Interest State Update
+            const intState = data.interest_state || "NEUTRAL";
+            const intBadge = document.getElementById("interest-badge");
+            const intText = document.getElementById("interest-badge-text");
+            const intIcon = document.getElementById("interest-icon");
+
+            intText.innerText = intState;
+            intBadge.className = "interest-badge";
+            if (intState === "INTERESTED") {
+                intBadge.classList.add("interested");
+                intIcon.className = "fa-solid fa-arrow-trend-up";
+            } else if (intState === "NOT INTERESTED") {
+                intBadge.classList.add("not-interested");
+                intIcon.className = "fa-solid fa-arrow-trend-down";
+            } else {
+                intBadge.classList.add("neutral");
+                intIcon.className = "fa-solid fa-compass";
+            }
+
+            // Supporting signals pills
+            const pillsContainer = document.getElementById("signals-pill-container");
+            pillsContainer.innerHTML = "";
+            const sigs = data.supporting_signals || ["Multimodal consensus active"];
+            sigs.forEach(sig => {
+                const pill = document.createElement("span");
+                pill.className = "signal-pill";
+                pill.innerText = sig;
+                pillsContainer.appendChild(pill);
+            });
+
+            // 2. Engagement & Stress Gauges
             const eng = data.cognitive_summary.engagement_score;
             const str = data.cognitive_summary.stress_index;
-            
-            // stroke-dashoffset formula: 126 base, offset = 126 * (1 - score)
+
             document.getElementById("eng-gauge").style.strokeDashoffset = 126 * (1 - eng);
             document.getElementById("str-gauge").style.strokeDashoffset = 126 * (1 - str);
-            
             document.getElementById("eng-val").innerText = `${Math.round(eng * 100)}%`;
             document.getElementById("str-val").innerText = `${Math.round(str * 100)}%`;
-            
             document.getElementById("eng-lbl").innerText = data.cognitive_summary.engagement_label;
             document.getElementById("str-lbl").innerText = data.cognitive_summary.stress_label;
 
-            // Gauge colors
-            document.getElementById("eng-gauge").style.stroke = eng > 0.65 ? "#00e650" : (eng > 0.45 ? "#ffc800" : "#ff3030");
+            document.getElementById("eng-gauge").style.stroke = eng > 0.58 ? "#00e650" : (eng > 0.38 ? "#ffc800" : "#ff3030");
             document.getElementById("str-gauge").style.stroke = str < 0.35 ? "#00e650" : (str < 0.65 ? "#ffc800" : "#ff3030");
 
-            // 3. Update Gaze, Blinks, Attention Zone
+            // 3. Body Signals
             document.getElementById("gaze-zone").innerText = data.body_signals.attention_zone;
             document.getElementById("gaze-contact").innerText = data.body_signals.eye_contact_score;
             document.getElementById("blink-rate").innerText = `${data.body_signals.blink_rate} / min`;
 
-            // Gaze zone badge class update
-            const zoneEl = document.getElementById("gaze-zone");
-            zoneEl.className = `metric-value badge ${data.body_signals.attention_zone === 'CENTER' ? 'badge-green' : 'badge-orange'}`;
-
-            // 4. Update Muscle AU Deviations
-            Object.keys(AU_FRIENDLY).forEach(key => {
-                const val = data.body_signals.active_aus.includes(key) ? 0.6 : 0.05; // mock visual deviation intensity or fetch raw if available
-                // If actual AU values are sent, map them directly:
-                // We'll read from dynamic AUs inside landmarks raw calculations if available
-            });
-
-            // Map AUs explicitly from incoming dictionary
-            const activeAUs = data.body_signals.active_aus;
+            // 4. Action Units
+            const activeAUs = data.body_signals.active_aus || [];
             Object.keys(AU_FRIENDLY).forEach(key => {
                 const isActive = activeAUs.includes(key);
-                const val = isActive ? 0.78 : 0.08;
-                document.getElementById(`au-val-${key}`).innerText = isActive ? "ACTIVE" : "CALM";
-                document.getElementById(`au-fill-${key}`).style.width = `${val * 100}%`;
-                document.getElementById(`au-fill-${key}`).style.background = isActive ? "#00e650" : "#2a2a2a";
+                const elVal = document.getElementById(`au-val-${key}`);
+                const elFill = document.getElementById(`au-fill-${key}`);
+                if (elVal && elFill) {
+                    elVal.innerText = isActive ? "ACTIVE" : "CALM";
+                    elFill.style.width = isActive ? "80%" : "8%";
+                    elFill.style.background = isActive ? "#00e650" : "#2a2a2a";
+                }
             });
 
-            // 5. Suppressed Emotion Alarms Banner & Logs
+            // 5. Emotion & Micro-Expression Profiler
             const emo = data.emotion_analysis;
+            document.getElementById("macro-val").innerText = emo.macro_emotion.toUpperCase();
+            document.getElementById("macro-conf").innerText = `${Math.round(emo.macro_confidence * 100)}%`;
+
+            const microVal = document.getElementById("micro-val");
+            const microRegion = document.getElementById("micro-region-badge");
             const repressedBanner = document.getElementById("repressed-alert");
             
-            if (emo.micro_emotion !== 'none') {
+            document.getElementById("me-count-live").innerText = emo.micro_expression_count || 0;
+            if (emo.last_micro_event) {
+                document.getElementById("me-last-live").innerText = `${emo.last_micro_event.type} (${emo.last_micro_event.region})`;
+            }
+
+            if (emo.micro_emotion && emo.micro_emotion !== 'none') {
                 repressedBanner.style.display = "flex";
-                document.getElementById("repressed-message").innerText = `⚠️ MICRO LEAKAGE: ${emo.micro_region.replace('_',' ').toUpperCase()} TWITCH [ ${emo.micro_emotion.toUpperCase()} ] (${emo.micro_duration_ms}ms)`;
+                document.getElementById("repressed-message").innerText = `⚠️ MICRO LEAKAGE: ${emo.micro_region.replace('_',' ').toUpperCase()} (${emo.micro_duration_ms}ms)`;
                 
-                // Append event log once per twitch trigger
-                const currentT = Date.now();
-                if (currentT - lastMicroTimestamp > 2500) { // Throttle repeat frames
-                    lastMicroTimestamp = currentT;
-                    
+                microVal.innerText = `${emo.micro_emotion.toUpperCase()} (${emo.micro_duration_ms}ms)`;
+                microVal.style.color = "#ff3030";
+                microRegion.style.display = "inline-block";
+                microRegion.innerText = emo.micro_region.replace('_', ' ').toUpperCase();
+
+                const nowMs = Date.now();
+                if (nowMs - lastMicroTimestamp > 2500) {
+                    lastMicroTimestamp = nowMs;
                     const tbody = document.getElementById("audit-tbody");
                     if (firstTableEntry) {
                         tbody.innerHTML = "";
                         firstTableEntry = false;
                     }
-                    
                     const tr = document.createElement("tr");
-                    const dateStr = new Date().toLocaleTimeString();
                     tr.innerHTML = `
-                        <td>${dateStr}</td>
+                        <td>${new Date().toLocaleTimeString()}</td>
                         <td class="badge-region">${emo.micro_region.replace('_',' ').toUpperCase()}</td>
                         <td class="text-red font-bold">${emo.micro_emotion.toUpperCase()}</td>
                         <td>${emo.micro_duration_ms} ms</td>
@@ -531,89 +787,234 @@
                 }
             } else {
                 repressedBanner.style.display = "none";
+                microVal.innerText = "MONITORING SENSORS...";
+                microVal.style.color = "#a0aec0";
+                microRegion.style.display = "none";
             }
 
-            // 6. Update Real-Time Macro & Micro Emotion Cards
-            const macroValEl = document.getElementById("macro-val");
-            const macroConfEl = document.getElementById("macro-conf");
-            const microValEl = document.getElementById("micro-val");
-            const microRegionEl = document.getElementById("micro-region-badge");
-
-            // Update Macro baseline state
-            macroValEl.innerText = emo.macro_emotion.toUpperCase();
-            macroConfEl.innerText = `${Math.round(emo.macro_confidence * 100)}%`;
-            
-            // Adjust Macro Badge Colors based on confidence levels
-            if (emo.macro_confidence > 0.70) {
-                macroConfEl.className = "badge badge-green";
-            } else if (emo.macro_confidence > 0.40) {
-                macroConfEl.className = "badge badge-orange";
-            } else {
-                macroConfEl.className = "badge";
-                macroConfEl.style.background = "#ff3030";
-            }
-
-            // Update Micro transient twitch state
-            if (emo.micro_emotion !== 'none') {
-                microValEl.innerText = `${emo.micro_emotion.toUpperCase()} (${emo.micro_duration_ms}ms)`;
-                microValEl.style.color = "#ff3030"; // alert red
-                microRegionEl.style.display = "inline-block";
-                microRegionEl.innerText = emo.micro_region.replace('_', ' ').toUpperCase();
-            } else {
-                microValEl.innerText = "LISTENING SENSORS...";
-                microValEl.style.color = "#a0aec0"; // muted gray
-                microRegionEl.style.display = "none";
-            }
-
-            // ── Asynchronous Canvas Snapshotting Engine ──
+            // Snapshots caching for report
             const nowTime = Date.now();
-            let shouldTakeSnapshot = false;
-            let snapshotType = "";
-            let snapshotEmotion = "";
-            let snapshotDetails = "";
-
-            // Check A: Micro expression twitches (Hidden emotional leaks)
-            if (emo.micro_emotion !== 'none' && nowTime - lastMicroTimestamp > 2500) {
-                shouldTakeSnapshot = true;
-                snapshotType = "MICRO LEAKAGE";
-                snapshotEmotion = emo.micro_emotion;
-                snapshotDetails = `${emo.micro_region.replace('_', ' ').toUpperCase()} twitch (${emo.micro_duration_ms}ms)`;
-            }
-            // Check B: Significant Macro expression change (Showing baseline)
-            else if (emo.macro_emotion !== 'neutral' && emo.macro_emotion !== lastMacroEmotion && nowTime - lastCapturedFrameTime > 2000) {
-                shouldTakeSnapshot = true;
-                snapshotType = "MACRO EXPRESSION";
-                snapshotEmotion = emo.macro_emotion;
-                snapshotDetails = `FACS confidence: ${Math.round(emo.macro_confidence * 100)}%`;
-                
-                lastMacroEmotion = emo.macro_emotion; // Update macro change tracking
-            }
-
-            if (shouldTakeSnapshot && sessionSnapshots.length < 6) {
+            if (emo.micro_emotion && emo.micro_emotion !== 'none' && nowTime - lastCapturedFrameTime > 3000 && sessionSnapshots.length < 6) {
                 lastCapturedFrameTime = nowTime;
-                
-                // Capture the exact BGR drawing canvas layout with mesh overlays and pose axes
-                const frameDataUrl = canvas.toDataURL('image/jpeg', 0.70);
-                
                 sessionSnapshots.push({
-                    imgUrl: frameDataUrl,
+                    imgUrl: canvas.toDataURL('image/jpeg', 0.70),
                     timeStr: new Date().toLocaleTimeString(),
-                    type: snapshotType,
-                    emotion: snapshotEmotion,
-                    details: snapshotDetails
+                    type: "MICRO LEAKAGE",
+                    emotion: emo.micro_emotion,
+                    details: `${emo.micro_region} twitch (${emo.micro_duration_ms}ms)`
                 });
-                
-                console.log(`[Snapshotter] Captured and cached frame snapshot of type: ${snapshotType} | Emotion: ${snapshotEmotion}`);
             }
         }
 
-        // ── Sliding Dock Handle Toggle Logic ──
+        // ── Tab Mode Switcher Logic ──────────────────────────────────────────
+        const tabLive = document.getElementById("tab-live");
+        const tabRecorded = document.getElementById("tab-recorded");
+        const liveMediaContainer = document.getElementById("live-media-container");
+        const recordedWorkspace = document.getElementById("recorded-workspace");
+        const centerPanelTitle = document.getElementById("center-panel-title");
+
+        tabLive.onclick = () => {
+            activeAnalysisMode = "live";
+            tabLive.classList.add("active");
+            tabRecorded.classList.remove("active");
+            liveMediaContainer.style.display = "flex";
+            recordedWorkspace.style.display = "none";
+            centerPanelTitle.innerText = "LIVE COGNITIVE FEED";
+
+            if (navigator.mediaDevices && !activeStream) {
+                startWebcam(constraints);
+            }
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                connectWebSocket();
+            }
+        };
+
+        tabRecorded.onclick = () => {
+            activeAnalysisMode = "recorded";
+            tabRecorded.classList.add("active");
+            tabLive.classList.remove("active");
+            liveMediaContainer.style.display = "none";
+            recordedWorkspace.style.display = "flex";
+            centerPanelTitle.innerText = "RECORDED VIDEO SESSION ANALYSIS";
+
+            // Pause live webcam stream to free bandwidth
+            if (activeStream) {
+                activeStream.getTracks().forEach(t => t.stop());
+                activeStream = null;
+            }
+        };
+
+        // ── Recorded Video Upload & Analysis ──────────────────────────────────
+        const videoDropzone = document.getElementById("video-dropzone");
+        const recordedFileInput = document.getElementById("recorded-file-input");
+        const recordedPreviewSection = document.getElementById("recorded-preview-section");
+        const recordedPreviewPlayer = document.getElementById("recorded-preview-player");
+        const selectedVideoName = document.getElementById("selected-video-name");
+        const videoFilesize = document.getElementById("video-filesize");
+        const btnStartVideoAnalysis = document.getElementById("btn-start-video-analysis");
+        const btnReuploadVideo = document.getElementById("btn-reupload-video");
+        const videoProgressCard = document.getElementById("video-progress-card");
+
+        let uploadedVideoSessionId = null;
+        let videoProgressPollInterval = null;
+
+        videoDropzone.onclick = () => recordedFileInput.click();
+
+        videoDropzone.ondragover = (e) => {
+            e.preventDefault();
+            videoDropzone.style.borderColor = "#ff8c00";
+            videoDropzone.style.background = "rgba(255, 140, 0, 0.12)";
+        };
+        videoDropzone.ondragleave = () => {
+            videoDropzone.style.borderColor = "rgba(255, 140, 0, 0.4)";
+            videoDropzone.style.background = "rgba(255, 140, 0, 0.03)";
+        };
+        videoDropzone.ondrop = (e) => {
+            e.preventDefault();
+            videoDropzone.style.borderColor = "rgba(255, 140, 0, 0.4)";
+            videoDropzone.style.background = "rgba(255, 140, 0, 0.03)";
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        };
+
+        recordedFileInput.onchange = (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        };
+
+        function handleFileSelection(file) {
+            const allowed = ['.mp4', '.avi', '.mov', '.mkv'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowed.includes(ext)) {
+                alert("Please select a supported video format: MP4, AVI, MOV, MKV.");
+                return;
+            }
+
+            selectedVideoName.innerText = file.name;
+            videoFilesize.innerText = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+            recordedPreviewPlayer.src = URL.createObjectURL(file);
+
+            videoDropzone.style.display = "none";
+            recordedPreviewSection.style.display = "flex";
+            videoProgressCard.style.display = "none";
+
+            // Upload video immediately to server
+            document.getElementById("system-status").innerHTML = "● UPLOADING VIDEO FILE...";
+            document.getElementById("system-status").style.color = "#ffc800";
+
+            const formData = new FormData();
+            formData.append("video", file);
+
+            fetch("/api/video/upload", { method: "POST", body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        uploadedVideoSessionId = data.session_id;
+                        document.getElementById("session-id-display").innerText = `SESSION: ${data.session_id}`;
+                        document.getElementById("system-status").innerHTML = "● VIDEO READY FOR ANALYSIS";
+                        document.getElementById("system-status").style.color = "#00e650";
+                    } else {
+                        alert("Video upload failed: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error("Upload error:", err);
+                    alert("Upload error: " + err);
+                });
+        }
+
+        btnReuploadVideo.onclick = () => {
+            recordedPreviewPlayer.pause();
+            recordedPreviewPlayer.src = "";
+            videoDropzone.style.display = "flex";
+            recordedPreviewSection.style.display = "none";
+            videoProgressCard.style.display = "none";
+            uploadedVideoSessionId = null;
+        };
+
+        btnStartVideoAnalysis.onclick = () => {
+            if (!uploadedVideoSessionId) {
+                alert("Please upload a video first.");
+                return;
+            }
+
+            btnStartVideoAnalysis.disabled = true;
+            btnStartVideoAnalysis.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ANALYZING...`;
+            videoProgressCard.style.display = "block";
+
+            fetch(`/api/video/analyze/${uploadedVideoSessionId}`, { method: "POST" })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        pollVideoProgress(uploadedVideoSessionId);
+                    } else {
+                        alert("Could not start analysis: " + data.message);
+                        btnStartVideoAnalysis.disabled = false;
+                        btnStartVideoAnalysis.innerHTML = `<i class="fa-solid fa-play"></i> START COMPREHENSIVE ANALYSIS`;
+                    }
+                })
+                .catch(err => {
+                    alert("Analysis request failed: " + err);
+                    btnStartVideoAnalysis.disabled = false;
+                });
+        };
+
+        function pollVideoProgress(sessionId) {
+            if (videoProgressPollInterval) clearInterval(videoProgressPollInterval);
+
+            videoProgressPollInterval = setInterval(() => {
+                fetch(`/api/video/progress/${sessionId}`)
+                    .then(r => r.json())
+                    .then(job => {
+                        if (job.status === "processing") {
+                            const pct = Math.round(job.progress_pct || 0);
+                            document.getElementById("video-progress-pct").innerText = `${pct}%`;
+                            document.getElementById("video-progress-bar").style.width = `${pct}%`;
+                            document.getElementById("stat-frames").innerText = `${job.current_frame} / ${job.total_frames}`;
+                            document.getElementById("stat-timestamp").innerText = job.current_timestamp || "00:00";
+                            document.getElementById("stat-fps").innerText = `${job.processing_fps || 0} FPS`;
+                            document.getElementById("stat-mes").innerText = job.micro_expressions_detected || 0;
+                            
+                            const intPill = document.getElementById("live-video-interest-pill");
+                            intPill.innerText = job.current_interest_state || "ANALYZING...";
+                            if (job.current_interest_state === "INTERESTED") intPill.style.background = "#16a34a";
+                            else if (job.current_interest_state === "NOT INTERESTED") intPill.style.background = "#dc2626";
+                            else intPill.style.background = "#d97706";
+
+                        } else if (job.status === "completed") {
+                            clearInterval(videoProgressPollInterval);
+                            document.getElementById("video-progress-pct").innerText = "100%";
+                            document.getElementById("video-progress-bar").style.width = "100%";
+                            btnStartVideoAnalysis.disabled = false;
+                            btnStartVideoAnalysis.innerHTML = `<i class="fa-solid fa-check"></i> ANALYSIS COMPLETE`;
+                            
+                            document.getElementById("system-status").innerHTML = "● ANALYSIS COMPLETE. GENERATING REPORT...";
+                            document.getElementById("system-status").style.color = "#00e650";
+
+                            // Automatically populate and display the comprehensive report modal!
+                            setTimeout(() => {
+                                populateReportModal(job.session_result);
+                            }, 500);
+
+                        } else if (job.status === "error") {
+                            clearInterval(videoProgressPollInterval);
+                            alert("Video analysis encountered an error: " + (job.error || "Unknown"));
+                            btnStartVideoAnalysis.disabled = false;
+                            btnStartVideoAnalysis.innerHTML = `<i class="fa-solid fa-play"></i> START COMPREHENSIVE ANALYSIS`;
+                        }
+                    })
+                    .catch(e => console.warn("Progress poll error:", e));
+            }, 300);
+        }
+
+        // ── Session Controls Dock ─────────────────────────────────────────────
         const slidingDock = document.getElementById("sliding-dock");
         const dockToggle = document.getElementById("dock-toggle");
         const dockToggleIcon = document.getElementById("dock-toggle-icon");
-        
         let dockCollapsed = false;
-        
+
         dockToggle.onclick = () => {
             dockCollapsed = !dockCollapsed;
             if (dockCollapsed) {
@@ -625,240 +1026,214 @@
             }
         };
 
-        // ── Manual Capture Button Click Handler ──
+        // End Session & Generate Report
+        document.getElementById("btn-toggle-session").onclick = () => {
+            document.getElementById("system-status").innerHTML = "● FINALIZING SESSION & COMPILING REPORT...";
+            fetch("/api/session/stop", { method: "POST" })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === "success" && data.session_result) {
+                        populateReportModal(data.session_result);
+                    } else {
+                        // If no active session or already ended, try loading current session
+                        fetch(`/api/session/${currentSessionId}`)
+                            .then(r => r.json())
+                            .then(res => populateReportModal(res))
+                            .catch(() => alert("No session recorded yet. Start camera or analyze a video."));
+                    }
+                })
+                .catch(err => {
+                    console.warn(err);
+                    fetch(`/api/session/${currentSessionId}`)
+                        .then(r => r.json())
+                        .then(res => populateReportModal(res));
+                });
+        };
+
+        document.getElementById("btn-view-report").onclick = () => {
+            fetch(`/api/session/${currentSessionId}`)
+                .then(r => r.json())
+                .then(res => populateReportModal(res))
+                .catch(() => alert("No active session found. Complete live analysis or upload a video first."));
+        };
+
+        // Manual snapshot
         document.getElementById("btn-capture-snapshot").onclick = () => {
-            if (!activeStream && !video.src) {
-                alert("No active camera or video feed loaded to capture.");
-                return;
-            }
-            
-            // Camera flash UI shutter effect
             canvas.style.filter = "brightness(2) contrast(1.2)";
-            setTimeout(() => {
-                canvas.style.filter = "none";
-            }, 150);
-            
+            setTimeout(() => { canvas.style.filter = "none"; }, 150);
+
             const frameDataUrl = canvas.toDataURL('image/jpeg', 0.70);
-            const macroVal = document.getElementById("macro-val").innerText;
-            const macroConf = document.getElementById("macro-conf").innerText;
-            
             sessionSnapshots.push({
                 imgUrl: frameDataUrl,
                 timeStr: new Date().toLocaleTimeString(),
                 type: "MANUAL CAPTURE",
-                emotion: macroVal.toLowerCase(),
-                details: `Manual snapshot | Conf: ${macroConf}`
+                emotion: document.getElementById("macro-val").innerText.toLowerCase(),
+                details: "Auditor snapshot captured"
             });
-            
-            // Notification toast style status update
-            const originalStatus = document.getElementById("system-status").innerHTML;
-            const originalColor = document.getElementById("system-status").style.color;
-            
-            document.getElementById("system-status").innerHTML = "● MANUAL SNAPSHOT CAPTURED";
-            document.getElementById("system-status").style.color = "#ff007f";
-            
+            document.getElementById("system-status").innerHTML = "● SNAPSHOT CAPTURED";
             setTimeout(() => {
-                document.getElementById("system-status").innerHTML = originalStatus;
-                document.getElementById("system-status").style.color = originalColor;
+                document.getElementById("system-status").innerHTML = "● SYSTEM STREAMING & ACTIVE";
             }, 1200);
-            
-            console.log(`[Snapshotter] Captured manual snapshot. Total cached: ${sessionSnapshots.length}`);
         };
 
-        // Rest controls
         document.getElementById("btn-calibrate").onclick = () => {
-            document.getElementById("system-status").innerHTML = "● SYSTEM CALIBRATING neutrality...";
-            // We mock the local keyboard key 'c' send or REST save
+            document.getElementById("system-status").innerHTML = "● CALIBRATING neutrality...";
             fetch('/api/calibration/load')
                 .then(r => r.json())
-                .then(d => {
+                .then(() => {
                     setTimeout(() => {
-                        document.getElementById("system-status").innerHTML = "● CALIBRATION COMPLETED";
+                        document.getElementById("system-status").innerHTML = "● CALIBRATION ACTIVE";
                         document.getElementById("system-status").style.color = "#00e650";
-                    }, 1000);
+                    }, 800);
                 });
         };
 
-        // ── Feature 1: Toggle Camera (Start / Stop) ─────────────────────────────
-        const toggleCamBtn = document.getElementById("btn-toggle-camera");
-        let cameraActive = true;
-
-        toggleCamBtn.onclick = () => {
+        document.getElementById("btn-toggle-camera").onclick = () => {
+            const btn = document.getElementById("btn-toggle-camera");
             if (cameraActive) {
-                // STOP Feed
-                try {
-                    if (activeStream) {
-                        activeStream.getTracks().forEach(track => {
-                            try { track.stop(); } catch(e) { console.warn("Track stop error:", e); }
-                        });
-                        activeStream = null;
-                    }
-                } catch(err) {
-                    console.error("Error stopping video stream tracks:", err);
+                if (activeStream) {
+                    activeStream.getTracks().forEach(t => t.stop());
+                    activeStream = null;
                 }
-                
-                try {
-                    if (socket) {
-                        socket.close();
-                    }
-                } catch(err) {
-                    console.error("Error closing WebSocket socket:", err);
-                }
-                
                 cameraActive = false;
-                toggleCamBtn.innerHTML = `<i class="fa-solid fa-video"></i> START CAMERA`;
-                toggleCamBtn.style.background = "#ff8c00";
-                
-                document.getElementById("connection-dot").style.background = "#ff3030";
-                document.getElementById("system-status").innerHTML = "● CAMERA FEED STOPPED";
-                document.getElementById("system-status").style.color = "#ff3030";
-                
-                // Automatically save session and open visual audit modal
-                setTimeout(() => {
-                    try {
-                        document.getElementById("btn-save").click();
-                    } catch(err) {
-                        console.error("Error invoking btn-save click:", err);
-                    }
-                }, 100);
+                btn.innerHTML = `<i class="fa-solid fa-video"></i> RESUME CAMERA`;
+                document.getElementById("system-status").innerHTML = "● CAMERA PAUSED";
             } else {
-                // START Feed
                 cameraActive = true;
-                toggleCamBtn.innerHTML = `<i class="fa-solid fa-video-slash"></i> STOP CAMERA`;
-                toggleCamBtn.style.background = "#232733";
-                
-                document.getElementById("system-status").innerHTML = "● INITIALISING FEED...";
-                document.getElementById("system-status").style.color = "#ffc800";
-                
+                btn.innerHTML = `<i class="fa-solid fa-video-slash"></i> PAUSE CAMERA`;
                 startWebcam(constraints);
             }
         };
 
-        // ── Feature 2: Load Video File ──────────────────────────────────────────
-        const loadVideoBtn = document.getElementById("btn-load-video");
-        const videoUploader = document.getElementById("video-uploader");
+        // ── Report Modal Population ──────────────────────────────────────────
+        const reportModal = document.getElementById("report-modal");
+        document.getElementById("btn-close-modal").onclick = () => { reportModal.style.display = "none"; };
+        document.getElementById("btn-modal-close").onclick = () => { reportModal.style.display = "none"; };
 
-        loadVideoBtn.onclick = () => {
-            videoUploader.click(); // trigger file browser select
-        };
+        function populateReportModal(report) {
+            if (!report) return;
+            const sid = report.session_id || "MMBI-SESSION";
+            currentSessionId = sid;
 
-        videoUploader.onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            // Header and download links
+            document.getElementById("rep-id").innerText = sid;
+            document.getElementById("rep-modal-subtitle").innerText = `Session ${sid} | ${report.analysis_type} Mode`;
+            const pdfUrl = `/api/session/${sid}/report.pdf`;
+            document.getElementById("rep-btn-download-pdf-top").href = pdfUrl;
+            document.getElementById("rep-btn-download-pdf-bottom").href = pdfUrl;
 
-            // Stop standard webcam tracks to unlock hardware
-            if (activeStream) {
-                activeStream.getTracks().forEach(track => track.stop());
-                activeStream = null;
+            // Section A: Overview
+            document.getElementById("rep-type").innerText = report.analysis_type || "Live";
+            document.getElementById("rep-dur").innerText = `${report.duration_formatted} (${report.duration_seconds}s)`;
+            document.getElementById("rep-frames").innerText = report.total_frames || 0;
+            document.getElementById("rep-fps").innerText = `${report.processing_fps || 0} FPS`;
+
+            // Section B: Interest Analysis
+            const intSum = report.interest_summary || {};
+            const domState = intSum.dominant_state || "NEUTRAL";
+            const intBadge = document.getElementById("rep-interest-badge");
+            intBadge.innerText = domState;
+            intBadge.style.background = domState === "INTERESTED" ? "#16a34a" : (domState === "NOT INTERESTED" ? "#dc2626" : "#d97706");
+
+            document.getElementById("rep-pct-interested").innerText = `${intSum.interested_percentage || 0}% (${intSum.interested_seconds || 0}s)`;
+            document.getElementById("rep-pct-neutral").innerText = `${intSum.neutral_percentage || 0}% (${intSum.neutral_seconds || 0}s)`;
+            document.getElementById("rep-pct-not-interested").innerText = `${intSum.not_interested_percentage || 0}% (${intSum.not_interested_seconds || 0}s)`;
+            document.getElementById("rep-transitions").innerText = intSum.transition_count || 0;
+
+            // Supporting signals
+            const sigList = document.getElementById("rep-supporting-signals-list");
+            sigList.innerHTML = "";
+            const sigs = intSum.supporting_signals || ["Multimodal consensus aligned."];
+            sigs.forEach(s => {
+                const li = document.createElement("li");
+                li.innerText = s;
+                sigList.appendChild(li);
+            });
+
+            // Section C & D: Metrics
+            const engSum = report.engagement_summary || {};
+            document.getElementById("rep-eng-avg").innerText = `${Math.round((engSum.average_engagement || 0.5) * 100)}%`;
+            document.getElementById("rep-eng-range").innerText = `${Math.round((engSum.min_engagement || 0.5) * 100)}% – ${Math.round((engSum.max_engagement || 0.5) * 100)}%`;
+            
+            const strSum = report.stress_summary || {};
+            document.getElementById("rep-str-avg").innerText = `${Math.round((strSum.average_stress || 0) * 100)}%`;
+            document.getElementById("rep-stress-load").innerText = `${strSum.sustained_stress_load_pct || 0}%`;
+
+            const attSum = report.attention_summary || {};
+            document.getElementById("rep-eye-contact").innerText = `${attSum.eye_contact_percentage || 0}%`;
+            
+            const gaze = attSum.gaze_distribution || {};
+            document.getElementById("rep-gaze-dist").innerText = `Center: ${gaze.CENTER || 0}% | Away: ${Math.round(100 - (gaze.CENTER || 0))}%`;
+
+            const blinks = attSum.blink_statistics || {};
+            document.getElementById("rep-blink-rate").innerText = `${blinks.average_blink_rate || 14} bpm`;
+            document.getElementById("rep-blink-stress").innerText = blinks.stress_blink_rate || "NORMAL";
+
+            // Section E: Micro-Expressions
+            const meSum = report.micro_expressions || {};
+            const meCount = meSum.total_count || 0;
+            const mePill = document.getElementById("rep-me-stats-pill");
+            mePill.innerText = `${meCount} DETECTED (${meSum.rate_per_min || 0}/min)`;
+            
+            const meTbody = document.getElementById("rep-me-tbody");
+            meTbody.innerHTML = "";
+            const meEvents = meSum.events_log || [];
+            if (meEvents.length === 0) {
+                meTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #718096; padding: 12px 0;">No micro-expression twitches registered in this session.</td></tr>`;
+            } else {
+                meEvents.forEach((ev, i) => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${i + 1}</td>
+                        <td>${ev.timestamp || "00:00"}</td>
+                        <td>${ev.duration_ms ? ev.duration_ms.toFixed(0) : 150} ms</td>
+                        <td class="badge-region">${(ev.region || "Face").toUpperCase()}</td>
+                        <td style="color: #ff3030; font-weight: 700;">${(ev.type || "Surprise").toUpperCase()}</td>
+                        <td>${(ev.intensity || 0.5).toFixed(2)}</td>
+                        <td>${(ev.confidence || 0.75).toFixed(2)}</td>
+                    `;
+                    meTbody.appendChild(tr);
+                });
             }
 
-            // Load the video file into the video element
-            const fileURL = URL.createObjectURL(file);
-            video.srcObject = null;
-            video.src = fileURL;
-            video.muted = true;
-            video.loop = true;
-            video.play();
-
-            // Set video sizes
-            video.onloadedmetadata = () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                hiddenCanvas.width = video.videoWidth;
-                hiddenCanvas.height = video.videoHeight;
-
-                document.getElementById("system-status").innerHTML = `● ANALYSING VIDEO: ${file.name.toUpperCase()}`;
-                document.getElementById("system-status").style.color = "#00d2ff";
-                
-                // Connect socket if closed and start streaming
-                if (!socket || socket.readyState !== WebSocket.OPEN) {
-                    connectWebSocket();
-                } else {
-                    isWaitingForServer = false;
-                    sendNextFrame();
-                }
-            };
-        };
-
-        // ── Feature 3: Show Post-Session Report Modal ───────────────────────────
-        // NOTE: The modal HTML is defined AFTER this script block, so we must
-        // use lazy getElementById lookups (not cached constants) for all modal elements.
-        function getReportModal() { return document.getElementById("report-modal"); }
-
-        // Bind close-modal triggers lazily after DOM is fully loaded
-        window.addEventListener('DOMContentLoaded', () => {
-            const closeBtn = document.getElementById("btn-close-modal");
-            const downloadBtn = document.getElementById("btn-modal-download");
-            if (closeBtn) closeBtn.onclick = () => { getReportModal().style.display = "none"; };
-            if (downloadBtn) downloadBtn.onclick = () => { getReportModal().style.display = "none"; };
-        });
-        window.onclick = (e) => {
-            const modal = getReportModal();
-            if (modal && e.target === modal) {
-                modal.style.display = "none";
+            // Section F: Interval Timeline Table
+            const tlTbody = document.getElementById("rep-timeline-tbody");
+            tlTbody.innerHTML = "";
+            const intervals = report.interest_timeline || [];
+            if (intervals.length === 0) {
+                tlTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #718096;">Single baseline state maintained.</td></tr>`;
+            } else {
+                intervals.forEach(itv => {
+                    const tr = document.createElement("tr");
+                    const stColor = itv.state === "INTERESTED" ? "#4ade80" : (itv.state === "NOT INTERESTED" ? "#f87171" : "#fbbf24");
+                    tr.innerHTML = `
+                        <td><strong>${itv.start_time} – ${itv.end_time}</strong></td>
+                        <td><span style="color: ${stColor}; font-weight: 800;">${itv.state}</span></td>
+                        <td>${itv.duration_sec}s</td>
+                        <td>${Math.round((itv.avg_engagement || 0.5) * 100)}%</td>
+                        <td>${itv.micro_expressions_count || 0}</td>
+                    `;
+                    tlTbody.appendChild(tr);
+                });
             }
-        };
 
-        function showMockReportModal() {
-            // Populate Modal with premium trial data
-            document.getElementById("rep-id").innerText = "TRIAL_SESSION_MOCK";
-            document.getElementById("rep-dur").innerText = "45 seconds";
-            document.getElementById("rep-frames").innerText = "1350";
-            document.getElementById("rep-eng").innerText = "72%";
-            document.getElementById("rep-str").innerText = "28%";
-            document.getElementById("rep-ec").innerText = "0.82";
-            document.getElementById("rep-stress-load").innerText = "12.5%";
-            
-            const hiddenValEl = document.getElementById("rep-hidden-emo");
-            hiddenValEl.style.color = "#ff8c00";
-            hiddenValEl.innerText = "EXPECTED HIDDEN EMOTION: [ SADNESS (TRIAL MOCK) ]";
-            
-            document.getElementById("rep-diagnosis-text").innerText = "This is a trial session simulation. FACS analysis predicts micro-expressions corresponding to brief eyebrow furrows (AU4) and chin raises (AU17), suggesting subtle repressed sadness while maintaining a neutral baseline state.";
-
-            // Populate Twitches Table with sample twitches
-            const tbody = document.getElementById("rep-twitches-tbody");
-            tbody.innerHTML = `
-                <tr>
-                    <td class="badge-region" style="font-size: 0.72rem;">EYEBROWS (AU4)</td>
-                    <td style="color: #ff3030; font-weight: 700;">SADNESS</td>
-                    <td>180 ms</td>
-                </tr>
-                <tr>
-                    <td class="badge-region" style="font-size: 0.72rem;">LIPS (AU15)</td>
-                    <td style="color: #ff3030; font-weight: 700;">DISGUST</td>
-                    <td>220 ms</td>
-                </tr>
-            `;
-
-            // Populate Snapshots Grid with the manual captures or sample visuals
+            // Snapshots Grid
             const snapGrid = document.getElementById("rep-snapshots-grid");
             snapGrid.innerHTML = "";
-            
             if (sessionSnapshots.length === 0) {
-                // If they took no snapshots, show a beautiful note on how to use webcam / video file
-                snapGrid.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; color: #a0aec0; padding: 20px 0; font-size: 0.8rem; line-height: 1.5;">
-                        <i class="fa-solid fa-circle-info" style="font-size: 1.5rem; color: #ff8c00; margin-bottom: 8px;"></i><br>
-                        <strong>No live snapshots were captured in this trial.</strong><br>
-                        To capture real facial signatures: grant camera permissions OR click <strong>LOAD VIDEO</strong> in the bottom controls dock to feed an MP4 video file!
-                    </div>
-                `;
+                snapGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #718096; padding: 15px 0;">No manual snapshot captures recorded.</div>`;
             } else {
                 sessionSnapshots.forEach(snap => {
                     const card = document.createElement("div");
                     card.className = "snapshot-card";
-                    const isMicro = snap.type === "MICRO LEAKAGE" || snap.type === "MANUAL CAPTURE";
-                    const badgeClass = isMicro ? "snapshot-badge micro" : "snapshot-badge macro";
-                    const emotionClass = isMicro ? "snapshot-emotion micro" : "snapshot-emotion macro";
-                    
                     card.innerHTML = `
                         <div class="snapshot-img-container">
-                            <img class="snapshot-img" src="${snap.imgUrl}" alt="Facial snapshot">
-                            <span class="${badgeClass}">${snap.type}</span>
+                            <img class="snapshot-img" src="${snap.imgUrl}" alt="Snapshot">
+                            <span class="snapshot-badge micro">${snap.type}</span>
                         </div>
                         <div class="snapshot-info">
                             <div class="snapshot-time">${snap.timeStr}</div>
-                            <div class="${emotionClass}">${snap.emotion.toUpperCase()}</div>
+                            <div class="snapshot-emotion micro">${snap.emotion.toUpperCase()}</div>
                             <div class="snapshot-desc">${snap.details}</div>
                         </div>
                     `;
@@ -866,412 +1241,83 @@
                 });
             }
 
-            // Open Modal!
-            getReportModal().style.display = "flex";
-            
-            // Show status update in header
-            document.getElementById("system-status").innerHTML = "● OPENED DEMO CLINICAL REVIEW";
-            document.getElementById("system-status").style.color = "#ff8c00";
+            // Show Feedback if previously submitted
+            if (report.feedback) {
+                document.getElementById("fb-interest-acc").value = report.feedback.interest_accuracy || 4;
+                document.getElementById("fb-micro-acc").value = report.feedback.micro_accuracy || 4;
+                document.getElementById("fb-comment").value = report.feedback.comment || "";
+                setStarRating(report.feedback.rating || 5);
+                document.getElementById("fb-status-msg").style.display = "inline";
+                document.getElementById("fb-status-msg").innerText = "✓ Previously submitted audit feedback loaded.";
+            } else {
+                document.getElementById("fb-status-msg").style.display = "none";
+            }
+
+            // Display modal
+            reportModal.style.display = "flex";
         }
 
-        document.getElementById("btn-save").onclick = () => {
-            document.getElementById("system-status").innerHTML = "● EXPORTING ASSESSMENTS...";
-            
-            fetch('/api/session/save', { method: 'POST' })
-                .then(r => r.json())
-                .then(d => {
-                    if (d.status === 'success') {
-                        document.getElementById("system-status").innerHTML = "● SESSION EXPORTED SUCCESSFULLY";
-                        document.getElementById("system-status").style.color = "#00e650";
-                        
-                        // Query the saved session JSON report card directly to populate the UI Modal!
-                        fetch(`/sessions/${d.files.json}`)
-                            .then(res => res.json())
-                            .then(report => {
-                                // Populate Modal Stats
-                                document.getElementById("rep-id").innerText = report.metadata.timestamp;
-                                document.getElementById("rep-dur").innerText = `${report.metadata.duration_seconds} seconds`;
-                                document.getElementById("rep-frames").innerText = report.metadata.total_frames;
-                                document.getElementById("rep-eng").innerText = `${Math.round(report.cognitive_summary.average_engagement * 100)}%`;
-                                document.getElementById("rep-str").innerText = `${Math.round(report.cognitive_summary.average_stress_index * 100)}%`;
-                                document.getElementById("rep-ec").innerText = report.cognitive_summary.average_eye_contact_score;
-                                document.getElementById("rep-stress-load").innerText = `${report.cognitive_summary.sustained_stress_load_pct}%`;
-                                
-                                // Populate Diagnostic Suppressed Emotion Card
-                                const hiddenEmo = report.micro_expressions.expected_hidden_emotion;
-                                const hiddenValEl = document.getElementById("rep-hidden-emo");
-                                hiddenValEl.innerText = `EXPECTED HIDDEN EMOTION: [ ${hiddenEmo.toUpperCase()} ]`;
-                                
-                                if (hiddenEmo === "NONE DETECTED") {
-                                    hiddenValEl.style.color = "#00e650"; // dynamic safe green
-                                    hiddenValEl.innerText = "EXPECTED HIDDEN EMOTION: [ NONE DETECTED ]";
-                                } else {
-                                    hiddenValEl.style.color = "#ff3030"; // alert red
-                                }
-                                document.getElementById("rep-diagnosis-text").innerText = report.micro_expressions.suppressed_emotion_analysis;
+        // ── Star Rating & Feedback Submission ─────────────────────────────────
+        const starBtns = document.querySelectorAll("#star-rating-overall .star-btn");
+        function setStarRating(val) {
+            userOverallRating = val;
+            starBtns.forEach(btn => {
+                const bVal = parseInt(btn.getAttribute("data-val"));
+                if (bVal <= val) btn.classList.add("active");
+                else btn.classList.remove("active");
+            });
+        }
 
-                                // Populate Twitches Table
-                                const tbody = document.getElementById("rep-twitches-tbody");
-                                tbody.innerHTML = "";
-                                
-                                const events = report.micro_expressions.events_log || [];
-                                if (events.length === 0) {
-                                    tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #718096; padding: 12px 0;">No involuntary twitches registered.</td></tr>`;
-                                } else {
-                                    events.forEach(ev => {
-                                        const tr = document.createElement("tr");
-                                        tr.innerHTML = `
-                                            <td class="badge-region" style="font-size: 0.72rem;">${ev.region.replace('_',' ').toUpperCase()}</td>
-                                            <td style="color: #ff3030; font-weight: 700;">${ev.micro_emotion.toUpperCase()}</td>
-                                            <td>${ev.duration_ms.toFixed(0)} ms</td>
-                                        `;
-                                        tbody.appendChild(tr);
-                                    });
-                                }
+        starBtns.forEach(btn => {
+            btn.onclick = () => {
+                const val = parseInt(btn.getAttribute("data-val"));
+                setStarRating(val);
+            };
+        });
 
-                                // Populate Snapshots Grid
-                                const snapGrid = document.getElementById("rep-snapshots-grid");
-                                snapGrid.innerHTML = "";
-                                
-                                if (sessionSnapshots.length === 0) {
-                                    snapGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #718096; padding: 20px 0;">No high-impact emotional changes captured.</div>`;
-                                } else {
-                                    sessionSnapshots.forEach(snap => {
-                                        const card = document.createElement("div");
-                                        card.className = "snapshot-card";
-                                        
-                                        const isMicro = snap.type === "MICRO LEAKAGE";
-                                        const badgeClass = isMicro ? "snapshot-badge micro" : "snapshot-badge macro";
-                                        const emotionClass = isMicro ? "snapshot-emotion micro" : "snapshot-emotion macro";
-                                        
-                                        card.innerHTML = `
-                                            <div class="snapshot-img-container">
-                                                <img class="snapshot-img" src="${snap.imgUrl}" alt="Facial snapshot">
-                                                <span class="${badgeClass}">${snap.type}</span>
-                                            </div>
-                                            <div class="snapshot-info">
-                                                <div class="snapshot-time">${snap.timeStr}</div>
-                                                <div class="${emotionClass}">${snap.emotion.toUpperCase()}</div>
-                                                <div class="snapshot-desc">${snap.details}</div>
-                                            </div>
-                                        `;
-                                        snapGrid.appendChild(card);
-                                    });
-                                }
+        document.getElementById("btn-submit-feedback").onclick = () => {
+            const interestAcc = parseInt(document.getElementById("fb-interest-acc").value);
+            const microAcc = parseInt(document.getElementById("fb-micro-acc").value);
+            const comment = document.getElementById("fb-comment").value;
 
-                                // Show Modal!
-                                getReportModal().style.display = "flex";
-                            })
-                            .catch(err => {
-                                console.warn("Error loading JSON assessment, showing trial mock instead:", err);
-                                showMockReportModal();
-                            });
-                    } else {
-                        console.warn(`Export incomplete (${d.message}). Showing simulation report.`);
-                        showMockReportModal();
-                    }
-                })
-                .catch(err => {
-                    console.warn("Connection/server unavailable. Launching mock report overlay:", err);
-                    showMockReportModal();
-                });
+            const feedbackPayload = {
+                rating: userOverallRating,
+                interest_accuracy: interestAcc,
+                micro_accuracy: microAcc,
+                comment: comment
+            };
+
+            const submitBtn = document.getElementById("btn-submit-feedback");
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+
+            fetch(`/api/session/${currentSessionId}/feedback`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(feedbackPayload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> Feedback Saved`;
+                document.getElementById("fb-status-msg").style.display = "inline";
+                document.getElementById("fb-status-msg").innerText = "✓ Feedback saved and embedded into PDF report!";
+                setTimeout(() => {
+                    submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Update Feedback`;
+                }, 2000);
+            })
+            .catch(err => {
+                submitBtn.disabled = false;
+                alert("Failed to submit feedback: " + err);
+            });
         };
+
+        // Initialize webcam on page load
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            startWebcam(constraints);
+        } else {
+            handleCameraError({ name: "NotSupportedError" });
+        }
     </script>
-
-    <!-- ── Post-Session Assessment Modal ────────────────────────────────────── -->
-    <style>
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(4, 5, 8, 0.85);
-            backdrop-filter: blur(15px);
-            z-index: 10000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        }
-        .modal-content {
-            background: rgba(18, 20, 26, 0.96);
-            border: 1px solid rgba(255, 140, 0, 0.2);
-            box-shadow: 0 0 40px rgba(255, 140, 0, 0.15);
-            border-radius: 20px;
-            width: 90%;
-            max-width: 800px;
-            max-height: 90vh;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            padding: 30px;
-            animation: scaleUp 0.3s cubic-bezier(0.1, 0.8, 0.25, 1);
-        }
-        @keyframes fadeIn {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
-        }
-        @keyframes scaleUp {
-            0% { transform: scale(0.9); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .modal-header h2 {
-            font-size: 1.15rem;
-            font-family: 'Outfit', sans-serif;
-            color: #ff8c00;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .close-modal-btn {
-            background: none;
-            border: none;
-            color: #a0aec0;
-            font-size: 1.8rem;
-            cursor: pointer;
-            transition: color 0.3s;
-        }
-        .close-modal-btn:hover {
-            color: #ff3030;
-        }
-        .modal-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            margin-bottom: 20px;
-        }
-        .modal-col h3 {
-            font-size: 0.85rem;
-            font-family: 'Outfit', sans-serif;
-            color: #a0aec0;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            border-bottom: 1px dashed rgba(255,255,255,0.04);
-            padding-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .report-stat-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            margin-bottom: 10px;
-            background: rgba(255,255,255,0.01);
-            padding: 8px;
-            border-radius: 6px;
-        }
-        .report-stat-row span { color: #a0aec0; }
-        .report-stat-row strong { color: #ffffff; }
-        .report-table-wrapper {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .report-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.78rem;
-        }
-        .report-table th {
-            color: #718096;
-            font-weight: 600;
-            padding-bottom: 6px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            text-align: left;
-        }
-        .report-table td {
-            padding: 8px 0;
-            border-bottom: 1px dashed rgba(255,255,255,0.02);
-            color: #e2e8f0;
-            text-align: left;
-        }
-        .report-diagnosis-card {
-            background: rgba(255, 140, 0, 0.02);
-            border: 1px solid rgba(255, 140, 0, 0.08);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 10px;
-        }
-        .report-diagnosis-card h3 {
-            font-size: 0.85rem;
-            font-family: 'Outfit', sans-serif;
-            color: #ff8c00;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .report-diagnosis-card p {
-            font-size: 0.82rem;
-            color: #cbd5e0;
-            line-height: 1.5;
-        }
-        .report-snapshots-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        .report-snapshots-card h3 {
-            font-size: 0.85rem;
-            font-family: 'Outfit', sans-serif;
-            color: #ff8c00;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .snapshots-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 16px;
-        }
-        .snapshot-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        .snapshot-card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(255, 140, 0, 0.3);
-            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.15);
-        }
-        .snapshot-img-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 4/3;
-            background: #000;
-            overflow: hidden;
-        }
-        .snapshot-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-        .snapshot-card:hover .snapshot-img {
-            transform: scale(1.05);
-        }
-        .snapshot-badge {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            font-size: 0.6rem;
-            font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 4px;
-            text-transform: uppercase;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-        }
-        .snapshot-badge.micro {
-            background: rgba(255, 48, 48, 0.9);
-            border: 1px solid #ff3030;
-            color: #fff;
-        }
-        .snapshot-badge.macro {
-            background: rgba(0, 210, 255, 0.9);
-            border: 1px solid #00d2ff;
-            color: #fff;
-        }
-        .snapshot-info {
-            padding: 10px;
-            font-size: 0.72rem;
-        }
-        .snapshot-time {
-            color: #718096;
-            font-size: 0.65rem;
-            margin-bottom: 4px;
-        }
-        .snapshot-emotion {
-            font-weight: 800;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-        .snapshot-emotion.micro {
-            color: #ff3030;
-        }
-        .snapshot-emotion.macro {
-            color: #00d2ff;
-        }
-        .snapshot-desc {
-            color: #cbd5e0;
-            font-size: 0.68rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-    </style>
-
-    <div id="report-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-brain"></i> MMBI DEEP ANALYST ASSESSMENT SUMMARY</h2>
-                <button class="close-modal-btn" id="btn-close-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-columns">
-                    <!-- Column 1: Stats -->
-                    <div class="modal-col">
-                        <h3><i class="fa-solid fa-chart-pie"></i> Session Statistics</h3>
-                        <div class="report-stat-row"><span>Session ID:</span><strong id="rep-id">-</strong></div>
-                        <div class="report-stat-row"><span>Duration:</span><strong id="rep-dur">-</strong></div>
-                        <div class="report-stat-row"><span>Frames Processed:</span><strong id="rep-frames">-</strong></div>
-                        <div class="report-stat-row"><span>Engagement Avg:</span><strong id="rep-eng">-</strong></div>
-                        <div class="report-stat-row"><span>Stress Avg:</span><strong id="rep-str">-</strong></div>
-                        <div class="report-stat-row"><span>Eye Contact Avg:</span><strong id="rep-ec">-</strong></div>
-                        <div class="report-stat-row"><span>Stress Load Ratio:</span><strong id="rep-stress-load">-</strong></div>
-                    </div>
-                    <!-- Column 2: Twitches -->
-                    <div class="modal-col">
-                        <h3><i class="fa-solid fa-bolt"></i> Captured Twitches</h3>
-                        <div class="report-table-wrapper">
-                            <table class="report-table">
-                                <thead>
-                                    <tr>
-                                        <th>Region</th>
-                                        <th>Leaked Emotion</th>
-                                        <th>Duration</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="rep-twitches-tbody">
-                                    <tr><td colspan="3" style="text-align: center; color: #718096; padding: 12px 0;">No involuntary twitches registered.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <!-- Bottom Card: Diagnosis -->
-                <div class="report-diagnosis-card">
-                    <h3><i class="fa-solid fa-user-doctor"></i> Intelligent Suppressed Emotion Analysis</h3>
-                    <h4 id="rep-hidden-emo" style="color: #ff3030; font-family: 'Outfit'; font-size: 1.15rem; margin: 10px 0;">EXPECTED HIDDEN EMOTION: [ SADNESS ]</h4>
-                    <p id="rep-diagnosis-text">-</p>
-                </div>
-                
-                <!-- Snapshot Frame Grid Audit -->
-                <div class="report-snapshots-card">
-                    <h3><i class="fa-solid fa-camera-retro"></i> Chronological Captured Facial Signatures</h3>
-                    <div class="snapshots-grid" id="rep-snapshots-grid">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer" style="margin-top: 20px;">
-                <button class="btn btn-save" id="btn-modal-download" style="width: 100%;"><i class="fa-solid fa-check"></i> Close & Confirm Assessment</button>
-            </div>
-        </div>
-    </div>
 </body>
 </html>

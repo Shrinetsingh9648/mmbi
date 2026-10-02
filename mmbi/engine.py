@@ -390,15 +390,7 @@ class BehaviourEngine:
                 self.collector.save_session(self._recorded_micro_expressions)
                 break
             elif key == ord('c'):
-                landmarks_2d = (
-                    self._last_state.raw.get('landmarks_2d')
-                    if self._last_state is not None else None
-                )
-                if landmarks_2d is not None:
-                    # Reconstruct 3-column landmarks array (x, y, z=0)
-                    lms = np.array(landmarks_2d)
-                    landmarks = np.zeros((len(lms), 3))
-                    landmarks[:, :2] = lms
+                if landmarks is not None:
                     self.gaze.calibrate(landmarks)
                     self.au.calibrate(landmarks)
                     self.buffer.reset()

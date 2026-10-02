@@ -1,23 +1,18 @@
+.venv/
 __pycache__/
 *.pyc
-*.pyo
-*.egg-info/
-dist/
-build/
-.idea/
-*.iml
-.vscode/
+
+learning/data/uploads/
+mmbi/learning/data/uploads/
+
+learning/data/sessions/
+mmbi/learning/data/sessions/
+
+learning/data/reports/
+mmbi/learning/data/reports/
+
+*.pt
+*.pth
+*.h5
+
 .env
-
-# Session data (generated at runtime)
-learning/data/sessions/*.npz
-learning/data/sessions/*.csv
-learning/data/sessions/*.json
-
-# Capture files
-capture/*.jpg
-capture/*.png
-
-# OS files
-Thumbs.db
-.DS_Store
